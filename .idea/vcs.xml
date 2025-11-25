@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="VcsDirectoryMappings">
+    <mapping directory="" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/codelens_data/repos/CodeLens-90cbd628" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/codelens_data/repos/CodeLens-bfbdfa28" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/codelens_data/repos/spring-petclinic-a6e5f66f" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/codelens_data/repos/spring-petclinic-a8dfd2e0" vcs="Git" />
+  </component>
+</project>

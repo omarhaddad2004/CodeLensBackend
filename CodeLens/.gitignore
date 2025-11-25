@@ -12,7 +12,7 @@ target/
 .settings
 .springBeans
 .sts4-cache
-
+../codelens_data/
 ### IntelliJ IDEA ###
 .idea
 ../.idea
