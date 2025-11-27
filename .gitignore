@@ -1,8 +1,12 @@
 HELP.md
-target/
-.mvn/wrapper/maven-wrapper.jar
+
+### Maven ###
+CodeLens/target/
 !**/src/main/**/target/
 !**/src/test/**/target/
+
+### CodeLens Data ###
+codelens_data/
 
 ### STS ###
 .apt_generated
@@ -12,11 +16,9 @@ target/
 .settings
 .springBeans
 .sts4-cache
-../codelens_data/
+
 ### IntelliJ IDEA ###
-.idea
-../.idea
-*.iws
+.idea/
 *.iml
 *.ipr
 

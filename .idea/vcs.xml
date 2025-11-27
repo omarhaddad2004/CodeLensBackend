@@ -2,9 +2,17 @@
 <project version="4">
   <component name="VcsDirectoryMappings">
     <mapping directory="" vcs="Git" />
-    <mapping directory="$PROJECT_DIR$/codelens_data/repos/CodeLens-90cbd628" vcs="Git" />
-    <mapping directory="$PROJECT_DIR$/codelens_data/repos/CodeLens-bfbdfa28" vcs="Git" />
-    <mapping directory="$PROJECT_DIR$/codelens_data/repos/spring-petclinic-a6e5f66f" vcs="Git" />
-    <mapping directory="$PROJECT_DIR$/codelens_data/repos/spring-petclinic-a8dfd2e0" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/codelens_data/repos/CodeLens-2e0e5bc7" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/codelens_data/repos/CodeLens-7b1b37e5" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/codelens_data/repos/Role-based-Access-Control-a7c3ce3a" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/codelens_data/repos/coffeeShop-0a9fd3ee" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/codelens_data/repos/shopping-List-2a57e484" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/codelens_data/repos/shopping-List-4bf3d406" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/codelens_data/repos/shopping-List-5f7e8a47" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/codelens_data/repos/shopping-List-74f7aa70" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/codelens_data/repos/shopping-List-75fabeee" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/codelens_data/repos/shopping-List-882fb054" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/codelens_data/repos/shopping-List-f034cd0f" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/codelens_data/repos/shopping-List-f3f47cca" vcs="Git" />
   </component>
 </project>
