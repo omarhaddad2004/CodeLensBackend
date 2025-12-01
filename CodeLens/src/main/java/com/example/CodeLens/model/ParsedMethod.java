@@ -1,5 +1,10 @@
 package com.example.CodeLens.model;
 
+import lombok.AllArgsConstructor;
+import lombok.NoArgsConstructor;
+import lombok.RequiredArgsConstructor;
+
+
 public class ParsedMethod {
     private final String name;
     private final String parameters;

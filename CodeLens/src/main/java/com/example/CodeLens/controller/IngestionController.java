@@ -1,6 +1,7 @@
 package com.example.CodeLens.controller;
 
 
+import com.example.CodeLens.service.EnrichmentService;
 import com.example.CodeLens.service.GitService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -16,6 +17,7 @@ import java.util.Map;
 public class IngestionController {
 
     private final GitService gitService;
+    private final  EnrichmentService enrichmentService;
 
     @PostMapping("/download")
     public ResponseEntity<Map<String, Object>> downloadRepo(@RequestBody Map<String, String> payload) {
@@ -47,5 +49,11 @@ public class IngestionController {
             response.put("error", e.getMessage());
             return ResponseEntity.internalServerError().body(response);
         }
+    }
+
+    @PostMapping("/enrich-data")
+    public String StartEnrichment() {
+        new Thread(() -> enrichmentService.runPipeline()).start();
+        return "Pipeline started! Check console logs and 'enriched' folder.";
     }
 }
