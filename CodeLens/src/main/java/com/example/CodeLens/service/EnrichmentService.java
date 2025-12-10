@@ -1,8 +1,11 @@
 package com.example.CodeLens.service;
 
-import com.example.CodeLens.dto.*;
+import com.example.CodeLens.model.elastic_model.CodeEntityDoc;
+import com.example.CodeLens.service.elastic_service.ElasticsearchIndexingService;
+import com.example.CodeLens.dto.ParserInputDto;
 import com.example.CodeLens.service.llm.GeminiService;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.HttpClientErrorException;
 
@@ -11,38 +14,49 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
+@Slf4j
 @Service
+// REMOVED @RequiredArgsConstructor. We will write the constructor manually.
 public class EnrichmentService {
 
     private final GeminiService aiService;
+    // REMOVED 'final' so we don't need it in the constructor arguments.
     private final ObjectMapper objectMapper;
+    private final ElasticsearchIndexingService elasticsearchIndexingService;
 
     private final String INPUT_DIR = "codelens_data/jsons";
+    // OUTPUT_DIR is no longer needed for saving files, but kept if you want to revert.
     private final String OUTPUT_DIR = "codelens_data/enriched";
 
     private final List<File> failedFiles = new ArrayList<>();
 
-    public EnrichmentService(GeminiService aiService) {
+    // --- NEW MANUAL CONSTRUCTOR ---
+    // This tells Spring to inject the two services, and we create ObjectMapper ourselves.
+    public EnrichmentService(GeminiService aiService,
+                             ElasticsearchIndexingService elasticsearchIndexingService) {
         this.aiService = aiService;
+        this.elasticsearchIndexingService = elasticsearchIndexingService;
+        // Manually create the ObjectMapper instance here.
         this.objectMapper = new ObjectMapper();
     }
+    // ------------------------------
 
     public void runPipeline() {
         File rootDir = new File(INPUT_DIR);
 
-        // find all repo folders (sub-director)
+        // find all repo folders (sub-directory)
         File[] repoFolders = rootDir.listFiles(File::isDirectory);
 
         if (repoFolders == null || repoFolders.length == 0) {
-            System.err.println("No repository folders found in " + INPUT_DIR);
+            log.error("No repository folders found in {}", INPUT_DIR);
             return;
         }
 
         // loop through each repository
         for (File repoFolder : repoFolders) {
-            System.out.println("==========================================");
-            System.out.println("processing loop: " + repoFolder.getName());
-            System.out.println("==========================================");
+            log.info("==========================================");
+            log.info("Processing repository: {}", repoFolder.getName());
+            log.info("==========================================");
 
             processRepository(repoFolder);
         }
@@ -52,33 +66,37 @@ public class EnrichmentService {
         File[] files = repoInputDir.listFiles((d, name) -> name.endsWith(".json"));
 
         if (files == null || files.length == 0) {
-            System.out.println("No JSON files in " + repoInputDir.getName());
+            log.warn("No JSON files found in {}", repoInputDir.getName());
             return;
         }
 
+        // Output dir creation is no longer strictly necessary if we don't save to disk,
+        // but keeping it doesn't hurt.
         File repoOutputDir = new File(OUTPUT_DIR, repoInputDir.getName());
         repoOutputDir.mkdirs();
 
         failedFiles.clear(); // the retry list
 
         // ==== pass 1 ====
-        System.out.println("=== STARTING PASS 1 (" + repoInputDir.getName() + ") ===");
+        log.info("=== STARTING PASS 1 ({}) ===", repoInputDir.getName());
         for (File file : files) {
-            boolean success = processFileSafe(file, repoOutputDir, 4000);
+            // Passed null for outputDir as it's no longer used in processFile
+            boolean success = processFileSafe(file, null, 4000);
             if (!success) {
                 failedFiles.add(file);
-                System.out.println(">> Added " + file.getName() + " to RETRY list.");
+                log.warn(">> Added {} to RETRY list.", file.getName());
             }
         }
 
-        // ==== paas 2 (retry) ========
+        // ==== pass 2 (retry) ========
         if (!failedFiles.isEmpty()) {
-            System.out.println("\n=== STARTING PASS 2 (retrying " + failedFiles.size() + " files) ===");
-            try { Thread.sleep(30000); } catch (InterruptedException e) {}
+            log.info("\n=== STARTING PASS 2 (retrying {} files) ===", failedFiles.size());
+            sleep(30000);
 
             for (File file : failedFiles) {
-                System.out.println("Retrying: " + file.getName());
-                processFileSafe(file, repoOutputDir, 10000);
+                log.info("Retrying: {}", file.getName());
+                // Passed null for outputDir
+                processFileSafe(file, null, 10000);
             }
         }
     }
@@ -88,19 +106,22 @@ public class EnrichmentService {
             processFile(inputFile, outputDir, sleepTime);
             return true;
         } catch (HttpClientErrorException.TooManyRequests e) {
-            System.err.println("gate limit hit: " + inputFile.getName());
+            log.error("Rate limit hit processing {}: {}", inputFile.getName(), e.getMessage());
             return false;
         } catch (Exception e) {
-            System.err.println("generic error on " + inputFile.getName() + ": " + e.getMessage());
+            log.error("Generic error processing {}: {}", inputFile.getName(), e.getMessage(), e);
             return false;
         }
     }
 
     private void processFile(File inputFile, File outputDir, int sleepTime) throws IOException {
-        System.out.println("reading: " + inputFile.getName());
+        log.info("Reading file: {}", inputFile.getName());
 
         ParserInputDto input = objectMapper.readValue(inputFile, ParserInputDto.class);
-        List<EnrichedOutputDto.EnrichedMethod> enrichedMethods = new ArrayList<>();
+
+        // List to hold Elasticsearch documents for this file
+        List<CodeEntityDoc> docsForEs = new ArrayList<>();
+
         String className = "unknown";
 
         if (input.classes() != null) {
@@ -111,38 +132,47 @@ public class EnrichmentService {
 
                         if (m.body() == null || m.body().trim().isEmpty()) continue;
 
-                        String signature = m.name() + " " + m.body();
+                        // Combine name and body for a richer embedding context
+                        String signatureForEmbedding = m.name() + " " + m.body();
 
+                        // 1. Get Summary from LLM
                         String summary = aiService.summarize(m.body());
                         sleep(sleepTime);
 
-                        List<Double> vector = aiService.embed(signature + " " + summary);
+                        // 2. Get Vector Embedding from LLM
+                        List<Double> vector = aiService.embed(signatureForEmbedding + " " + summary);
                         sleep(sleepTime);
 
-                        enrichedMethods.add(new EnrichedOutputDto.EnrichedMethod(
-                                m.name(), m.body(), summary, vector
-                        ));
+                        // Create Elasticsearch Document
+                        CodeEntityDoc doc = new CodeEntityDoc(
+                                input.filePath(),
+                                className,
+                                m.name(),
+                                m.body(),
+                                summary,
+                                vector
+                        );
+                        docsForEs.add(doc);
                     }
                 }
             }
         }
 
-        if (!enrichedMethods.isEmpty()) {
-            EnrichedOutputDto output = new EnrichedOutputDto(input.filePath(), className, enrichedMethods);
-            // dynamic save
-            File outputFile = new File(outputDir, inputFile.getName());
-
-            objectMapper.writerWithDefaultPrettyPrinter().writeValue(outputFile, output);
-            System.out.println("saved: " + outputFile.getPath());
+        // Save batch to Elasticsearch instead of disk
+        if (!docsForEs.isEmpty()) {
+            elasticsearchIndexingService.saveBatch(docsForEs);
+            log.info("Successfully indexed {} methods from file: {}", docsForEs.size(), inputFile.getName());
         }
         else {
-            System.out.println("skipping " + inputFile.getName() + " (no code)");
+            log.info("Skipping {} (no actionable code found).", inputFile.getName());
         }
     }
 
     private void sleep(int ms) {
         try {
             Thread.sleep(ms);
-        } catch (InterruptedException e) {}
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+        }
     }
 }

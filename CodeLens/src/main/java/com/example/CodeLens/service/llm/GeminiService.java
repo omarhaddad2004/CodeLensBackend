@@ -41,7 +41,6 @@ public class GeminiService {
         );
 
         try {
-
             Map response = restClient.post()
                     .uri(url)
                     .contentType(MediaType.APPLICATION_JSON)
@@ -62,10 +61,43 @@ public class GeminiService {
             return "Error generating summary.";
         }
     }
+    public String chat(String prompt) {
+        String url = baseUrl + "/" + chatModel + ":generateContent?key=" + apiKey;
 
+        Map<String, Object> requestBody = Map.of(
+                "contents", List.of(
+                        Map.of("parts", List.of(
+                                Map.of("text", prompt)
+                        ))
+                )
+        );
+
+        try {
+            Map response = restClient.post()
+                    .uri(url)
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .body(requestBody)
+                    .retrieve()
+                    .body(Map.class);
+
+            List candidates = (List) response.get("candidates");
+            Map firstCandidate = (Map) candidates.get(0);
+
+            Map content = (Map) firstCandidate.get("content");
+            List parts = (List) content.get("parts");
+            Map firstPart = (Map) parts.get(0);
+
+            return (String) firstPart.get("text");
+
+        } catch (Exception e) {
+            e.printStackTrace();
+            return "Error generating Chat response.";
+        }
+    }
+
+    @SuppressWarnings("unchecked")
     public List<Double> embed(String text) {
         String url = baseUrl + "/" + embeddingModel + ":embedContent?key=" + apiKey;
-
 
         Map<String, Object> requestBody = Map.of(
                 "model", "models/" + embeddingModel,
@@ -91,5 +123,15 @@ public class GeminiService {
             e.printStackTrace();
             return List.of();
         }
+    }
+
+    // Optional helper if you ever need float[]
+    public float[] embedAsFloatArray(String text) {
+        List<Double> values = embed(text);
+        float[] result = new float[values.size()];
+        for (int i = 0; i < values.size(); i++) {
+            result[i] = values.get(i).floatValue();
+        }
+        return result;
     }
 }

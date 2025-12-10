@@ -2,6 +2,7 @@
 <project version="4">
   <component name="VcsDirectoryMappings">
     <mapping directory="" vcs="Git" />
-    <mapping directory="$PROJECT_DIR$/codelens_data/repos/Springboot_training5-6ba761f2" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/codelens_data/repos/SearchEngine-2bc8d06e" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/codelens_data/repos/SearchEngine-4771ffeb" vcs="Git" />
   </component>
 </project>
